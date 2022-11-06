@@ -1,6 +1,7 @@
+import itertools
+import json
 import logging
 import pprint
-import itertools
 
 import coloredlogs
 from ortools.sat.python import cp_model
@@ -11,8 +12,7 @@ _NUM_PARTICIPANTS = 50
 _NUM_GAMES = 5
 _NUM_ROUNDS = 4
 _SOLUTION_LIMIT = 1
-
-_HUMAN_NAMES = {"participant": "Participante", "game": "Mesa", "round": "Ronda DAFO"}
+_MAX_REPEAT_MATCHUPS = 2
 
 
 class PartialSolutionPrinter(cp_model.CpSolverSolutionCallback):
@@ -45,6 +45,7 @@ class PartialSolutionPrinter(cp_model.CpSolverSolutionCallback):
             sol.append(the_round)
 
         _logger.info("Solution #%i:\n%s", self._solution_count, pprint.pformat(sol))
+        _logger.info("Solution #%i (JSON):\n%s", self._solution_count, json.dumps(sol))
 
         if self._solution_count >= self._solution_limit:
             _logger.info("Stop search after %i solutions", self._solution_limit)
@@ -87,7 +88,10 @@ def main():
     }
 
     for p1, p2 in itertools.combinations(range(_NUM_PARTICIPANTS), 2):
-        model.AddAtMostOne(round_matchups[(r, p1, p2)] for r in range(_NUM_ROUNDS))
+        model.Add(
+            sum(round_matchups[(r, p1, p2)] for r in range(_NUM_ROUNDS))
+            <= _MAX_REPEAT_MATCHUPS
+        )
 
     round_game_matchups = {
         (r, g, p1, p2): model.NewBoolVar(
