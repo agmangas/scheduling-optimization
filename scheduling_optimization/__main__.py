@@ -15,6 +15,21 @@ _SOLUTION_LIMIT = 1
 _MAX_REPEAT_MATCHUPS = 2
 
 
+def count_repeated_matchups(sol):
+    flat_sol = [item for the_round in sol for item in the_round]
+
+    counts = {}
+
+    for p1, p2 in itertools.combinations(range(_NUM_PARTICIPANTS), 2):
+        counts[(p1, p2)] = counts.get((p1, p2), 0)
+
+        for item in flat_sol:
+            if p1 in item and p2 in item:
+                counts[(p1, p2)] += 1
+
+    return sum(val - 1 for val in counts.values() if val > 1)
+
+
 class PartialSolutionPrinter(cp_model.CpSolverSolutionCallback):
     def __init__(self, allocations, num_participants, num_games, num_rounds, limit):
         cp_model.CpSolverSolutionCallback.__init__(self)
@@ -46,6 +61,12 @@ class PartialSolutionPrinter(cp_model.CpSolverSolutionCallback):
 
         _logger.info("Solution #%i:\n%s", self._solution_count, pprint.pformat(sol))
         _logger.info("Solution #%i (JSON):\n%s", self._solution_count, json.dumps(sol))
+
+        _logger.info(
+            "Solution #%i (repeated matchups): %s",
+            self._solution_count,
+            count_repeated_matchups(sol),
+        )
 
         if self._solution_count >= self._solution_limit:
             _logger.info("Stop search after %i solutions", self._solution_limit)
