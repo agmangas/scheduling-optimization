@@ -4,6 +4,7 @@ import logging
 import pprint
 
 import coloredlogs
+import numpy
 from ortools.sat.python import cp_model
 
 _logger = logging.getLogger(__name__)
@@ -28,6 +29,34 @@ def count_repeated_matchups(sol):
                 counts[(p1, p2)] += 1
 
     return sum(val - 1 for val in counts.values() if val > 1)
+
+
+def get_avg_meetups(sol):
+    flat_sol = [item for the_round in sol for item in the_round]
+
+    meetups = {}
+
+    for p in range(_NUM_PARTICIPANTS):
+        meetups[p] = meetups.get(p, [])
+
+        for the_game in flat_sol:
+            if p in the_game:
+                meetups[p].extend([item for item in the_game if item != p])
+
+    meetups = {key: set(val) for key, val in meetups.items()}
+    stats_arr = numpy.array([len(val) for val in meetups.values()])
+
+    _logger.debug(
+        "Meetups stats: %s",
+        {
+            "mean": numpy.mean(stats_arr),
+            "median": numpy.median(stats_arr),
+            "min": numpy.min(stats_arr),
+            "max": numpy.max(stats_arr),
+        },
+    )
+
+    return numpy.mean(stats_arr)
 
 
 def build_solution_c_arr_template(sol, tag_len=12):
@@ -85,6 +114,12 @@ class PartialSolutionPrinter(cp_model.CpSolverSolutionCallback):
 
         _logger.info("Solution #%i:\n%s", self._solution_count, pprint.pformat(sol))
         _logger.info("Solution #%i (JSON):\n%s", self._solution_count, json.dumps(sol))
+
+        _logger.info(
+            "Solution #%i (avg. meetups): %s",
+            self._solution_count,
+            get_avg_meetups(sol),
+        )
 
         _logger.info(
             "Solution #%i (C arr):\n%s",
