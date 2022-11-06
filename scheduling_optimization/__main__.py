@@ -30,6 +30,30 @@ def count_repeated_matchups(sol):
     return sum(val - 1 for val in counts.values() if val > 1)
 
 
+def build_solution_c_arr_template(sol, tag_len=12):
+    entries = []
+
+    for p in range(_NUM_PARTICIPANTS):
+        games = []
+
+        for the_round in sol:
+            for idx_game, the_game in enumerate(the_round):
+                if p in the_game:
+                    games.append(idx_game)
+
+        assert len(games) == _NUM_ROUNDS
+
+        entries.append(
+            '{{"{tag}", {{{games_idx}}}}}'.format(
+                tag="F" * tag_len, games_idx=", ".join([str(item) for item in games])
+            )
+        )
+
+    assert len(entries) == _NUM_PARTICIPANTS
+
+    return ", \n".join(entries)
+
+
 class PartialSolutionPrinter(cp_model.CpSolverSolutionCallback):
     def __init__(self, allocations, num_participants, num_games, num_rounds, limit):
         cp_model.CpSolverSolutionCallback.__init__(self)
@@ -61,6 +85,12 @@ class PartialSolutionPrinter(cp_model.CpSolverSolutionCallback):
 
         _logger.info("Solution #%i:\n%s", self._solution_count, pprint.pformat(sol))
         _logger.info("Solution #%i (JSON):\n%s", self._solution_count, json.dumps(sol))
+
+        _logger.info(
+            "Solution #%i (C arr):\n%s",
+            self._solution_count,
+            build_solution_c_arr_template(sol),
+        )
 
         _logger.info(
             "Solution #%i (repeated matchups): %s",
